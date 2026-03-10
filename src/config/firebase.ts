@@ -1,6 +1,6 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getApp, initializeApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,6 +12,18 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+export const auth: Auth = getAuth(app);
+export const db: Firestore = getFirestore(app);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const USER_CREATION_APP_NAME = "UserCreation";
+
+/** Returns an isolated Auth instance used only for creating new accounts.
+ *  Uses an existing secondary app if already initialised, otherwise creates one.
+ *  This keeps the manager's primary session completely untouched. */
+export function getAuthForUserCreation(): Auth {
+  try {
+    return getAuth(getApp(USER_CREATION_APP_NAME));
+  } catch {
+    return getAuth(initializeApp(firebaseConfig, USER_CREATION_APP_NAME));
+  }
+}

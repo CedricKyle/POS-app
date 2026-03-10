@@ -1,0 +1,108 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helper functions
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isManager() {
+      return isSignedIn() && getUserRole() == "manager";
+    }
+
+    function isCashier() {
+      return isSignedIn() && getUserRole() == "cashier";
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /users/{userId}
+    //   - Any authenticated user can read their own document
+    //   - Managers can read ALL user documents (for user management)
+    //   - Only managers can create / update / delete user documents
+    // ─────────────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read:   if isOwner(userId) || isManager();
+      allow create: if isManager()
+                    && request.resource.data.role in ["cashier", "manager"];
+      allow update: if isManager()
+                    && request.resource.data.role in ["cashier", "manager"];
+      allow delete: if isManager();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /users/{userId}/products/{productId}
+    //   - Cashier: read only
+    //   - Manager: full CRUD
+    // ─────────────────────────────────────────────────────────────────────────
+    match /users/{userId}/products/{productId} {
+      allow read:             if isSignedIn() && isOwner(userId);
+      allow create, update,
+            delete:           if isManager() && isOwner(userId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /users/{userId}/transactions/{transactionId}
+    //   - Cashier: create (checkout) + read
+    //   - Manager: full CRUD
+    // ─────────────────────────────────────────────────────────────────────────
+    match /users/{userId}/transactions/{transactionId} {
+      allow read:   if isSignedIn() && isOwner(userId);
+      allow create: if (isCashier() || isManager()) && isOwner(userId);
+      allow update,
+            delete: if isManager() && isOwner(userId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /users/{userId}/customers/{customerId}
+    //   - Cashier: read + create
+    //   - Manager: full CRUD
+    // ─────────────────────────────────────────────────────────────────────────
+    match /users/{userId}/customers/{customerId} {
+      allow read,
+            create: if (isCashier() || isManager()) && isOwner(userId);
+      allow update,
+            delete: if isManager() && isOwner(userId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /users/{userId}/loans/{loanId}
+    //   - Cashier: read + create
+    //   - Manager: full CRUD
+    // ─────────────────────────────────────────────────────────────────────────
+    match /users/{userId}/loans/{loanId} {
+      allow read,
+            create: if (isCashier() || isManager()) && isOwner(userId);
+      allow update,
+            delete: if isManager() && isOwner(userId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /users/{userId}/settings/{settingId}
+    //   - Cashier: read only
+    //   - Manager: read + write
+    // ─────────────────────────────────────────────────────────────────────────
+    match /users/{userId}/settings/{settingId} {
+      allow read:             if isSignedIn() && isOwner(userId);
+      allow create, update,
+            delete:           if isManager() && isOwner(userId);
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

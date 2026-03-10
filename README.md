@@ -54,6 +54,17 @@ A lightweight, mobile-first Point of Sale web application built for tablets and 
 
 ---
 
+## User Roles
+
+The app supports two user roles:
+
+| Role | Description |
+|---|---|
+| **Cashier** | Can access the POS screen to process sales and handle transactions |
+| **Manager** | Full access — includes everything a Cashier can do, plus product management, records, loan tracking, and settings |
+
+---
+
 ## Pages
 
 | Route | Page | Description |
@@ -69,7 +80,13 @@ A lightweight, mobile-first Point of Sale web application built for tablets and 
 ## Firebase Data Model
 
 ```
-/users/{userId}
+/users/{userId}                      ← user profile + role
+  - uid: string
+  - email: string
+  - displayName: string
+  - role: "cashier" | "manager"
+  - createdAt: timestamp
+
   /products/{productId}
     - name: string
     - price: number
@@ -105,6 +122,45 @@ A lightweight, mobile-first Point of Sale web application built for tablets and 
 ```
 
 ---
+
+## User Authentication & Roles
+
+### Auth Flow
+- Sign-in via **Firebase Auth** (email + password) on the `LoginPage`
+- On successful sign-in, `AuthContext` fetches `/users/{uid}` from Firestore to resolve the user's **role**
+- The resolved `role` (`"cashier"` | `"manager"`) is exposed via the `useAuth()` hook throughout the app
+
+### Roles
+
+| Role | Permissions |
+|---|---|
+| **Cashier** | Read products, create transactions, read/create customers & loans |
+| **Manager** | Full CRUD on everything — products, transactions, customers, loans, settings + user management |
+
+### Creating Accounts
+
+User accounts are created by a **Manager** only. A one-time seed script is provided to bootstrap the first manager:
+
+```bash
+# Install tsx if needed
+npm install -D tsx dotenv
+
+# Run the seed script ONCE
+npx tsx scripts/create-manager.ts
+```
+
+> ⚠️ Edit `scripts/create-manager.ts` to set your email/password before running. Delete or disable the script after use and **change the password** after first login.
+
+### Firestore Security Rules
+
+Rules are defined in `firestore.rules`. Deploy with:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+---
+
 ## Security
 
 ### Authentication (Firebase Auth)
