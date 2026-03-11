@@ -64,7 +64,20 @@ export const deleteProduct = createAsyncThunk(
 const productsSlice = createSlice({
   name: "products",
   initialState,
-  reducers: {},
+  reducers: {
+    /** Deduct sold quantities from in-memory stock after a successful checkout. */
+    deductStock(
+      state,
+      action: PayloadAction<{ productId: string; qty: number }[]>,
+    ) {
+      for (const { productId, qty } of action.payload) {
+        const product = state.items.find((p) => p.id === productId);
+        if (product) {
+          product.stock = Math.max(0, product.stock - qty);
+        }
+      }
+    },
+  },
   extraReducers: (builder) => {
     // fetchProducts
     builder
@@ -134,4 +147,5 @@ const productsSlice = createSlice({
   },
 });
 
+export const { deductStock } = productsSlice.actions;
 export default productsSlice.reducer;
