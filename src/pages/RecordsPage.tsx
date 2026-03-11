@@ -10,12 +10,14 @@ import {
   selectRecordsStatus,
   selectGroupedByDate,
   selectSummaryTotals,
+  selectChartData,
 } from "@/store/recordsSlice";
 import RecordsFilterTabs from "@/components/records/RecordsFilterTabs";
 import DateRangePicker from "@/components/records/DateRangePicker";
 import RecordsSummaryBar from "@/components/records/RecordsSummaryBar";
 import TransactionGroup from "@/components/records/TransactionGroup";
 import TransactionDetailSheet from "@/components/records/TransactionDetailSheet";
+import SalesLineChart from "@/components/records/SalesLineChart";
 import type { Transaction } from "@/types/transaction";
 
 // ─── Skeleton loader ──────────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ export default function RecordsPage() {
   const status = useAppSelector(selectRecordsStatus);
   const groupedByDate = useAppSelector(selectGroupedByDate);
   const totals = useAppSelector(selectSummaryTotals);
+  const chartData = useAppSelector(selectChartData);
 
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [selectedTxNumber, setSelectedTxNumber] = useState(0);
@@ -109,6 +112,11 @@ export default function RecordsPage() {
         utang={totals.utang}
         grand={totals.grand}
       />
+
+      {/* Sales line chart */}
+      {!isLoading && chartData.length > 0 && (
+        <SalesLineChart data={chartData} filterMode={filter.mode} />
+      )}
 
       {/* Transaction list */}
       {isLoading ? (

@@ -30,6 +30,7 @@ import {
   clearCart,
 } from "@/store/cartSlice";
 import { deductStock } from "@/store/productsSlice";
+import { invalidateRecords } from "@/store/recordsSlice";
 import { checkout } from "@/services/checkoutService";
 import { useAuth } from "@/hooks/useAuth";
 import CartItemRow from "./CartItemRow";
@@ -113,6 +114,7 @@ export default function CartSheet({
       dispatch(
         deductStock(items.map((i) => ({ productId: i.productId, qty: i.qty }))),
       );
+      dispatch(invalidateRecords());
       dispatch(clearCart());
       setOrderDiscountInput("");
       setConfirmOpen(false);

@@ -74,6 +74,9 @@ const recordsSlice = createSlice({
       state.filter.from = action.payload.from;
       state.filter.to = action.payload.to;
     },
+    invalidateRecords(state) {
+      state.status = "idle";
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -92,7 +95,8 @@ const recordsSlice = createSlice({
   },
 });
 
-export const { setFilterMode, setCustomRange } = recordsSlice.actions;
+export const { setFilterMode, setCustomRange, invalidateRecords } =
+  recordsSlice.actions;
 export default recordsSlice.reducer;
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
@@ -169,5 +173,70 @@ export const selectSummaryTotals = createSelector(
       .filter((t) => t.paymentType === "utang")
       .reduce((sum, t) => sum + t.total, 0);
     return { cash, utang, grand: cash + utang };
+  },
+);
+
+export interface ChartDataPoint {
+  date: string;
+  cash: number;
+  utang: number;
+}
+
+const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+export const selectChartData = createSelector(
+  selectFilteredTransactions,
+  selectRecordsFilter,
+  (transactions, filter): ChartDataPoint[] => {
+    const now = new Date();
+    const map = new Map<string, ChartDataPoint>();
+
+    if (filter.mode === "daily") {
+      // Full 24-hour skeleton
+      for (let h = 0; h < 24; h++) {
+        map.set(`${h}h`, { date: `${h}h`, cash: 0, utang: 0 });
+      }
+      for (const tx of transactions) {
+        const h = parseISO(tx.createdAt).getHours();
+        const entry = map.get(`${h}h`)!;
+        if (tx.paymentType === "cash") entry.cash += tx.total;
+        else entry.utang += tx.total;
+      }
+    } else if (filter.mode === "weekly") {
+      // Mon → Sun skeleton
+      for (const d of WEEK_DAYS) map.set(d, { date: d, cash: 0, utang: 0 });
+      for (const tx of transactions) {
+        const jsDay = parseISO(tx.createdAt).getDay(); // 0=Sun
+        const idx = jsDay === 0 ? 6 : jsDay - 1;
+        const entry = map.get(WEEK_DAYS[idx])!;
+        if (tx.paymentType === "cash") entry.cash += tx.total;
+        else entry.utang += tx.total;
+      }
+    } else if (filter.mode === "monthly") {
+      // Day 1 → last day of current month skeleton
+      const daysInMonth = endOfMonth(now).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        map.set(String(d), { date: String(d), cash: 0, utang: 0 });
+      }
+      for (const tx of transactions) {
+        const d = String(parseISO(tx.createdAt).getDate());
+        const entry = map.get(d);
+        if (entry) {
+          if (tx.paymentType === "cash") entry.cash += tx.total;
+          else entry.utang += tx.total;
+        }
+      }
+    } else {
+      // Custom — one bucket per day that appears in data
+      for (const tx of transactions) {
+        const key = format(parseISO(tx.createdAt), "MMM d");
+        if (!map.has(key)) map.set(key, { date: key, cash: 0, utang: 0 });
+        const entry = map.get(key)!;
+        if (tx.paymentType === "cash") entry.cash += tx.total;
+        else entry.utang += tx.total;
+      }
+    }
+
+    return Array.from(map.values());
   },
 );
