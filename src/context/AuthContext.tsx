@@ -1,9 +1,24 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { createContext, useEffect, useState, type ReactNode } from "react";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/config/firebase";
 import type { AppUser, UserRole } from "@/types/auth";
-import { AuthContext } from "@/context/authContext";
+
+// ─── Context Definition ───────────────────────────────────────────────────────
+
+export interface AuthContextValue {
+  /** Raw Firebase Auth user (null = signed out) */
+  firebaseUser: User | null;
+  /** Enriched user with role from Firestore (null = signed out or loading) */
+  appUser: AppUser | null;
+  /** Role shortcut — undefined while loading */
+  role: UserRole | undefined;
+  /** True while auth state / Firestore doc is being resolved */
+  loading: boolean;
+  signOutUser: () => Promise<void>;
+}
+
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 

@@ -26,7 +26,7 @@ export default function AppHeader({ pageTitle }: AppHeaderProps) {
         <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold">
             <ShoppingCart className="h-5 w-5" />
-            <span>Edison Merchandise</span>
+            <span>Divina's Variety Store</span>
             {pageTitle && (
               <span className="text-muted-foreground font-normal text-sm hidden sm:inline">
                 / {pageTitle}

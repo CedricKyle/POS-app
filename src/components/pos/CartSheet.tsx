@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -277,7 +276,7 @@ export default function CartSheet({
         open={confirmOpen}
         onOpenChange={(v) => !isCheckingOut && setConfirmOpen(v)}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-sm">
           <DialogHeader>
             <DialogTitle>Confirm Checkout</DialogTitle>
           </DialogHeader>
@@ -356,30 +355,30 @@ export default function CartSheet({
             )}
           </div>
 
-          <DialogFooter className="gap-2">
+          <div className="flex flex-col gap-3 pt-1">
             <Button
-              variant="outline"
-              className="flex-1"
-              disabled={isCheckingOut}
-              onClick={() => setConfirmOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1"
+              className="w-full h-14 text-base font-semibold"
               disabled={!canConfirm}
               onClick={handleConfirm}
             >
               {isCheckingOut ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   Processing…
                 </>
               ) : (
                 "Confirm"
               )}
             </Button>
-          </DialogFooter>
+            <Button
+              variant="outline"
+              className="w-full h-12 text-base"
+              disabled={isCheckingOut}
+              onClick={() => setConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

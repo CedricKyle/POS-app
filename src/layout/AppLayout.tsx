@@ -10,14 +10,17 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
   return (
-    <div className="min-h-svh flex flex-col bg-background">
+    <div className="h-svh flex flex-col bg-background">
       <AppHeader pageTitle={pageTitle} />
-      <div className="flex-1">{children}</div>
-      {/* Spacer so body content doesn't slide under the fixed QuickNav */}
-      <div
-        className="h-16 shrink-0"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      />
+      {/* Only this area scrolls — header and QuickNav stay fixed */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {children}
+        {/* Spacer so content doesn't slide under the fixed QuickNav */}
+        <div
+          className="h-16 shrink-0"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        />
+      </div>
       <QuickNav />
       <Toaster position="top-center" />
     </div>

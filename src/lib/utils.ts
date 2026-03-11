@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Format a number as Philippine Peso currency: ₱1,234.56 */
+export function formatCurrency(amount: number): string {
+  return `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function isWeightBased(unit: ProductUnit): boolean {
   return ["kg", "g", "L", "mL"].includes(unit);
 }
