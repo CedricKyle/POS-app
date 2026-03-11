@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/config/firebase";
-import { ShoppingCart, LogIn, Eye, EyeOff, Loader2 } from "lucide-react";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/config/firebase";
+import { LogIn, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -26,6 +27,8 @@ export default function LoginPage() {
         return "Too many failed attempts. Please try again later.";
       case "auth/user-disabled":
         return "This account has been disabled.";
+      case "auth/account-deleted":
+        return "Your account has been removed. Please contact your manager.";
       default:
         return "Sign in failed. Please check your credentials.";
     }
@@ -36,8 +39,18 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/users", { replace: true });
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+
+      // Guard: ensure the user still has a Firestore document.
+      // Firebase Auth accounts persist even after the Firestore doc is deleted.
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (!snap.exists()) {
+        await signOut(auth);
+        setError(getErrorMessage("auth/account-deleted"));
+        return;
+      }
+
+      navigate("/", { replace: true });
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? "";
       setError(getErrorMessage(code));

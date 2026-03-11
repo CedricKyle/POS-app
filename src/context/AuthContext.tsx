@@ -1,30 +1,9 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/config/firebase";
 import type { AppUser, UserRole } from "@/types/auth";
-
-// ─── Context shape ───────────────────────────────────────────────────────────
-
-interface AuthContextValue {
-  /** Raw Firebase Auth user (null = signed out) */
-  firebaseUser: User | null;
-  /** Enriched user with role from Firestore (null = signed out or loading) */
-  appUser: AppUser | null;
-  /** Role shortcut — undefined while loading */
-  role: UserRole | undefined;
-  /** True while auth state / Firestore doc is being resolved */
-  loading: boolean;
-  signOutUser: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+import { AuthContext } from "@/context/authContext";
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 
@@ -57,29 +36,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: data.role as UserRole,
             createdAt: data.createdAt?.toDate?.() ?? new Date(),
           });
+          setLoading(false);
         } else {
-          // No Firestore doc — auto-create one (bootstrap: first account = manager)
-          const defaultRole: UserRole = "manager";
-          const defaultName = user.displayName ?? user.email?.split("@")[0] ?? "Manager";
-          await setDoc(userRef, {
-            uid: user.uid,
-            email: user.email ?? "",
-            displayName: defaultName,
-            role: defaultRole,
-            createdAt: serverTimestamp(),
-          });
-          setAppUser({
-            uid: user.uid,
-            email: user.email ?? "",
-            displayName: defaultName,
-            role: defaultRole,
-            createdAt: new Date(),
-          });
+          // No Firestore document — this user has been deleted.
+          // Force sign-out and keep loading=true; the resulting null
+          // auth-state event will set loading(false) and redirect to /login.
+          await signOut(auth);
         }
       } catch (err) {
-        console.error("Failed to fetch/create user document:", err);
+        console.error("Failed to fetch user document:", err);
         setAppUser(null);
-      } finally {
         setLoading(false);
       }
     });
@@ -104,14 +70,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-// ─── Hook ─────────────────────────────────────────────────────────────────────
-
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used inside <AuthProvider>");
-  }
-  return ctx;
 }

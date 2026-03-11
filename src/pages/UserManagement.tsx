@@ -14,8 +14,7 @@ import {
   updatePassword,
 } from "firebase/auth";
 import { db, getAuthForUserCreation } from "@/config/firebase";
-import { useAuth } from "@/context/AuthContext";
-import AppHeader from "@/layout/AppHeader";
+import { useAuth } from "@/hooks/useAuth";
 import type { AppUser, UserRole } from "@/types/auth";
 
 // shadcn/ui
@@ -609,7 +608,7 @@ function DeleteConfirmDialog({
             type="button"
             variant="destructive"
             onClick={handleConfirm}
-            className="gap-2"
+            className="gap-2 ml-2"
           >
             <Trash2 className="h-4 w-4" />
             Delete User
@@ -696,144 +695,137 @@ export default function UserManagement() {
   const cashiers = users.filter((u) => u.role === "cashier");
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <AppHeader pageTitle="User Management" />
-
-      <main className="max-w-4xl mx-auto px-6 py-10">
-        {/* ── Page title + Add button ── */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">User Management</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage cashier and manager accounts for your store.
-            </p>
-          </div>
-
-          {appUser && <AddUserDialog onCreated={handleUserCreated} />}
+    <main className="max-w-4xl mx-auto px-6 py-10">
+      {/* ── Page title + Add button ── */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">User Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage cashier and manager accounts for your store.
+          </p>
         </div>
 
-        {/* ── Stat cards ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-          {[
-            {
-              label: "Total Users",
-              value: users.length,
-              icon: <Users className="h-4 w-4" />,
-            },
-            {
-              label: "Managers",
-              value: managers.length,
-              icon: <ShieldCheck className="h-4 w-4" />,
-            },
-            {
-              label: "Cashiers",
-              value: cashiers.length,
-              icon: <UserCircle2 className="h-4 w-4" />,
-            },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-xl border border-border bg-muted/30 p-4 flex items-center gap-3"
-            >
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                {s.icon}
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </div>
+        {appUser && <AddUserDialog onCreated={handleUserCreated} />}
+      </div>
+
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+        {[
+          {
+            label: "Total Users",
+            value: users.length,
+            icon: <Users className="h-4 w-4" />,
+          },
+          {
+            label: "Managers",
+            value: managers.length,
+            icon: <ShieldCheck className="h-4 w-4" />,
+          },
+          {
+            label: "Cashiers",
+            value: cashiers.length,
+            icon: <UserCircle2 className="h-4 w-4" />,
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="rounded-xl border border-border bg-muted/30 p-4 flex items-center gap-3"
+          >
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              {s.icon}
             </div>
-          ))}
+            <div>
+              <p className="text-xl font-semibold">{s.value}</p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Users table ── */}
+      {loadingUsers ? (
+        <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading users…
         </div>
+      ) : users.length === 0 ? (
+        <div className="text-center py-20 text-muted-foreground">
+          <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p>No users yet. Add your first user.</p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead>Name</TableHead>
+                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead className="w-20 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((u) => (
+                <TableRow key={u.uid}>
+                  {/* Name + avatar */}
+                  <TableCell>
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+                          {u.displayName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{u.displayName}</span>
+                      {u.uid === appUser?.uid && (
+                        <span className="text-xs text-muted-foreground">
+                          (you)
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
 
-        {/* ── Users table ── */}
-        {loadingUsers ? (
-          <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Loading users…
-          </div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground">
-            <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
-            <p>No users yet. Add your first user.</p>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="w-20 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((u) => (
-                  <TableRow key={u.uid}>
-                    {/* Name + avatar */}
-                    <TableCell>
-                      <div className="flex items-center gap-2.5">
-                        <Avatar className="h-7 w-7">
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
-                            {u.displayName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{u.displayName}</span>
-                        {u.uid === appUser?.uid && (
-                          <span className="text-xs text-muted-foreground">
-                            (you)
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
+                  {/* Email */}
+                  <TableCell className="hidden sm:table-cell text-muted-foreground">
+                    {u.email}
+                  </TableCell>
 
-                    {/* Email */}
-                    <TableCell className="hidden sm:table-cell text-muted-foreground">
-                      {u.email}
-                    </TableCell>
+                  {/* Role badge */}
+                  <TableCell>
+                    <Badge
+                      variant={u.role === "manager" ? "default" : "secondary"}
+                      className="capitalize gap-1"
+                    >
+                      {u.role === "manager" && (
+                        <ShieldCheck className="h-3 w-3" />
+                      )}
+                      {u.role}
+                    </Badge>
+                  </TableCell>
 
-                    {/* Role badge */}
-                    <TableCell>
-                      <Badge
-                        variant={u.role === "manager" ? "default" : "secondary"}
-                        className="capitalize gap-1"
-                      >
-                        {u.role === "manager" && (
-                          <ShieldCheck className="h-3 w-3" />
-                        )}
-                        {u.role}
-                      </Badge>
-                    </TableCell>
+                  {/* Actions: Edit + Delete */}
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      {/* Edit — always shown */}
+                      <EditUserDialog user={u} onUpdated={handleUserUpdated} />
 
-                    {/* Actions: Edit + Delete */}
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        {/* Edit — always shown */}
-                        <EditUserDialog
+                      {/* Delete — hidden for current user */}
+                      {u.uid !== appUser?.uid ? (
+                        <DeleteConfirmDialog
                           user={u}
-                          onUpdated={handleUserUpdated}
+                          onConfirm={() => handleDelete(u.uid)}
+                          isDeleting={deletingUid === u.uid}
                         />
-
-                        {/* Delete — hidden for current user */}
-                        {u.uid !== appUser?.uid ? (
-                          <DeleteConfirmDialog
-                            user={u}
-                            onConfirm={() => handleDelete(u.uid)}
-                            isDeleting={deletingUid === u.uid}
-                          />
-                        ) : (
-                          <span className="w-4" />
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </main>
-    </div>
+                      ) : (
+                        <span className="w-4" />
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </main>
   );
 }
