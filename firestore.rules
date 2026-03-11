@@ -59,7 +59,7 @@ service cloud.firestore {
     //   - Manager: full CRUD
     // ─────────────────────────────────────────────────────────────────────────
     match /users/{userId}/transactions/{transactionId} {
-      allow read:   if isSignedIn() && isOwner(userId);
+      allow read:   if isManager() && isOwner(userId);
       allow create: if (isCashier() || isManager()) && isOwner(userId);
       allow update,
             delete: if isManager() && isOwner(userId);
